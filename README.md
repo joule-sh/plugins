@@ -9,8 +9,16 @@ Install one straight from this repository:
 
 ```
 POST /card-plugins/from-source
-{"sourceUrl": "https://raw.githubusercontent.com/joule-sh/plugins/main/plugins/linear-cards.json"}
+{"sourceUrl": "https://cdn.jsdelivr.net/gh/joule-sh/plugins@main/plugins/linear-cards.json"}
 ```
+
+Use the CDN address, not `raw.githubusercontent.com`. The engine fetches a
+manifest server-side, where either works — but raw GitHub serves every file as
+`text/plain` with no CORS header and a `sandbox` CSP, so the moment anything is
+fetched by a *browser* the raw URL stops working and the failure looks like a
+broken plugin rather than a wrong host. jsDelivr sends the right content type,
+allows cross-origin reads, and caches. Pin a tag instead of `@main` once you
+have released one: `@v1.0.0` is immutable, `@main` changes under installs.
 
 ## What a plugin is
 
