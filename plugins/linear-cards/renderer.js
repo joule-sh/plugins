@@ -96,6 +96,25 @@ function issuesFromEvidence(evidence) {
   return [];
 }
 
+// The workspace's own states when the turn looked them up, else Linear's
+// defaults. A workspace with custom states gets them as soon as the model has
+// called list_issue_statuses; until then the four every workspace has.
+function statusesFromEvidence(evidence) {
+  for (var i = 0; i < evidence.length; i++) {
+    var data = parseLoose(evidence[i]);
+    var list = data && Array.isArray(data.statuses) ? data.statuses : null;
+    if (list && list.length > 0) {
+      var names = [];
+      for (var k = 0; k < list.length; k++) {
+        var name = typeof list[k] === "string" ? list[k] : (list[k] && list[k].name);
+        if (typeof name === "string" && name !== "") { names.push(name); }
+      }
+      if (names.length > 0) { return names.slice(0, 6); }
+    }
+  }
+  return ["Todo", "In Progress", "Done", "Canceled"];
+}
+
 function renderCycle(content, evidence) {
   var d;
   try { d = JSON.parse(content); } catch (e) { return ""; }
@@ -140,11 +159,17 @@ function renderIssues(content, evidence) {
   if (all.length === 0) return "";
   var shown = all.slice(0, 10);
 
+  // The states a row can be moved to. Read from the evidence when the turn
+  // fetched them (list_issue_statuses), else the four Linear ships with —
+  // named rather than guessed, so a workspace with custom states gets its own
+  // the moment the model has looked them up.
+  var states = statusesFromEvidence(evidence);
+
   var rows = "";
   for (var i = 0; i < shown.length; i++) {
     var issue = shown[i];
     var key = esc(String(issue.id || "").slice(0, 16));
-    var title = esc(String(issue.title || "").slice(0, 120));
+    var title = esc(String(issue.title || "").slice(0, 160));
     var st = String(issue.statusType || "");
     var chip = stateInk(st);
     var status = esc(String(issue.status || "").slice(0, 24));
@@ -152,21 +177,57 @@ function renderIssues(content, evidence) {
       ? '<span style="font-size:11px;opacity:.55;flex:none">' + esc(String(issue.priority.name || "").slice(0, 12)) + '</span>' : "";
     var due = typeof issue.dueDate === "string" && issue.dueDate !== ""
       ? '<span style="font-size:11px;opacity:.55;flex:none">due ' + esc(day(issue.dueDate)) + '</span>' : "";
-    // Only Linear's own host becomes a link; anything else stays inert text.
-    // The console's sanitizer enforces https on every url anyway — this is
-    // the renderer holding its own standard, not relying on the net below.
+    var struck = st === "canceled" ? "text-decoration:line-through;opacity:.6;" : "";
+
+    // Only Linear's own host becomes a link.
     var url = String(issue.url || "");
     var safe = /^https:\/\/linear\.app\//.test(url) ? esc(url) : "";
-    var open = safe === "" ? "<div" : '<a href="' + safe + '" target="_blank" rel="noopener noreferrer"';
-    var shut = safe === "" ? "</div>" : "</a>";
-    var struck = st === "canceled" ? "text-decoration:line-through;opacity:.6;" : "";
-    rows += open + ' style="display:flex;align-items:center;gap:10px;padding:8px 12px;'
-      + 'border-top:1px solid ' + BORDER + ';color:inherit;text-decoration:none;cursor:' + (safe === "" ? "default" : "pointer") + '">'
+    var link = safe === ""
+      ? ""
+      : '<a href="' + safe + '" target="_blank" rel="noopener noreferrer"'
+        + ' style="font-size:11.5px;color:inherit;opacity:.6">Open in Linear &#8599;</a>';
+
+    // The body: description, and the moves. `details`/`summary` rather than a
+    // click handler, because the sanitizer strips every handler a renderer
+    // could write — correctly — and a disclosure needs none. The browser owns
+    // the open state, so it survives a re-render of the surrounding message.
+    var body = String(issue.description || "").trim();
+    var described = body === ""
+      ? '<div style="font-size:12.5px;opacity:.5">No description.</div>'
+      : '<div style="font-size:13px;line-height:1.55;white-space:pre-wrap;opacity:.8">'
+        + esc(body.slice(0, 1200)) + (body.length > 1200 ? "&hellip;" : "") + '</div>';
+
+    // The moves. data-card-send carries the SENTENCE the console will send as
+    // a message — the card composes a turn, the model calls the tool, and the
+    // transcript records that the issue moved. Nothing here reaches Linear.
+    var moves = "";
+    for (var m = 0; m < states.length; m++) {
+      if (states[m].toLowerCase() === String(issue.status || "").toLowerCase()) { continue; }
+      var to = esc(states[m]);
+      moves += '<button type="button" data-card-send="Move ' + esc(String(issue.id || ""))
+        + ' to ' + to + ' in Linear."'
+        + ' style="font:inherit;font-size:11.5px;padding:3px 10px;border-radius:999px;'
+        + 'cursor:pointer;background:none;color:inherit;border:1px solid ' + BORDER + ';opacity:.85">'
+        + to + '</button>';
+    }
+    var actions = moves === "" ? "" :
+      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px">'
+      + '<span style="font-size:11px;opacity:.5;margin-right:2px">Move to</span>' + moves + '</div>';
+
+    rows += '<details style="border-top:1px solid ' + BORDER + '">'
+      + '<summary style="display:flex;align-items:center;gap:10px;padding:8px 12px;'
+      + 'cursor:pointer;list-style:none">'
       + '<span style="font:600 11.5px ui-monospace,monospace;opacity:.55;flex:none">' + key + '</span>'
-      + '<span style="flex:1;min-width:0;font-size:13.5px;' + struck + 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + title + '</span>'
+      + '<span style="flex:1;min-width:0;font-size:13.5px;' + struck
+      + 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + title + '</span>'
       + pr + due
-      + '<span style="flex:none;font-size:11px;font-weight:600;color:' + chip.ink + ';background:' + chip.bg + ';border-radius:999px;padding:2px 9px">' + status + '</span>'
-      + shut;
+      + '<span style="flex:none;font-size:11px;font-weight:600;color:' + chip.ink
+      + ';background:' + chip.bg + ';border-radius:999px;padding:2px 9px">' + status + '</span>'
+      + '</summary>'
+      + '<div style="padding:2px 12px 12px 12px;display:flex;flex-direction:column;gap:8px">'
+      + described + actions
+      + (link === "" ? "" : '<div>' + link + '</div>')
+      + '</div></details>';
   }
 
   var title2 = typeof d.title === "string" && d.title.trim() !== ""
@@ -176,7 +237,7 @@ function renderIssues(content, evidence) {
 
   return '<div data-linear-card="issues" style="margin:10px 0;border:1px solid ' + BORDER + ';border-radius:12px;max-width:640px;font-family:inherit;overflow:hidden">'
     + '<div style="display:flex;align-items:center;gap:8px;padding:9px 12px">'
-    + '<span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.6">Linear · ' + title2 + '</span>'
+    + '<span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.6">Linear &middot; ' + title2 + '</span>'
     + '<span style="flex:1"></span>'
     + '<span style="font-size:11.5px;opacity:.55">' + all.length + ' issue' + (all.length === 1 ? "" : "s") + '</span>'
     + '</div>' + rows + more + '</div>';

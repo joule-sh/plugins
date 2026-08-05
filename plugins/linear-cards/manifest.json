@@ -2,7 +2,7 @@
   "id": "linear-cards",
   "pluginName": "Linear cards",
   "description": "Draws Linear cycles and issue lists as cards instead of prose.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "cards": [
     {
       "toolName": "list_cycles",
