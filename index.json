@@ -13,8 +13,9 @@
         "LINEAR_CYCLE",
         "LINEAR_ISSUES"
       ],
-      "version": "1.0.0",
-      "manifest": "plugins/linear-cards.json"
+      "version": "1.1.0",
+      "manifest": "plugins/linear-cards/manifest.json",
+      "renderer": "plugins/linear-cards/renderer.js"
     }
   ]
 }

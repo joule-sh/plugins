@@ -81,17 +81,34 @@ drops some of them at any size worth running — so it is not asked to.
 
 That is why `payload` holds a team name and not an issue count.
 
-## Renderers live in the console
+## Renderers ship with the plugin, and run in a sandbox
 
-A manifest is data. It ships no code, and nothing executable is fetched at
-install time — a plugin that could ship its own drawing code would be a way to
-put somebody else's markup inside a transcript, which is a bad trade for a
-progress bar. The console looks a renderer up **by marker**; a marker it has no
-renderer for degrades to the model's own visible line, never to a blank.
+A plugin folder holds its renderer as source:
 
-So a new marker needs a renderer contributed to the console
-(`app/src/cards.ts` in `std-contrib`) — or reuse an existing marker if your
-tool's result has the same shape.
+```
+plugins/<id>/manifest.json    "renderer": "./renderer.js"
+plugins/<id>/renderer.js      export default [{ marker, render }]
+```
+
+At install the engine fetches the renderer once and **snapshots it** — the
+code a deployment runs is the code its operator installed, not whatever the
+URL serves later, and a CDN outage cannot take cards down. A version bump is a
+reinstall, on purpose: an install is a decision.
+
+The console executes renderers inside a sandboxed iframe: **null origin, no
+cookies, no storage, no network, no reach into the page**. `render(content,
+evidence)` is a pure function from strings to an HTML string — `content` is
+the model's short JSON, `evidence` is the raw text of the turn's JSON-shaped
+tool results. The returned HTML is sanitized before insertion (scripts, event
+handlers and non-https urls are stripped), and a renderer that is missing,
+slow or broken degrades to the model's own visible line, never to a blank.
+
+Renderer ground rules:
+
+- plain JS, one file, no imports — the sandbox has no module graph beyond it
+- no `fetch`, no timers that outlive the render, budget ~50ms per call
+- read every number, id and url from `evidence`, never from `content`
+- escape everything you interpolate; the sanitizer is the net, not the plan
 
 ## Contributing
 

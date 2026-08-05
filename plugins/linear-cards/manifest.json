@@ -2,7 +2,7 @@
   "id": "linear-cards",
   "pluginName": "Linear cards",
   "description": "Draws Linear cycles and issue lists as cards instead of prose.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "cards": [
     {
       "toolName": "list_cycles",
@@ -26,5 +26,6 @@
       "when": "which tickets or issues are open, assigned or in a cycle",
       "then": "call list_issues, then emit [LINEAR_ISSUES]"
     }
-  ]
+  ],
+  "renderer": "./renderer.js"
 }
