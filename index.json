@@ -1,0 +1,20 @@
+{
+  "plugins": [
+    {
+      "id": "linear-cards",
+      "name": "Linear cards",
+      "description": "Draws Linear cycles and issue lists as cards instead of prose.",
+      "connector": "linear",
+      "tools": [
+        "list_cycles",
+        "list_issues"
+      ],
+      "markers": [
+        "LINEAR_CYCLE",
+        "LINEAR_ISSUES"
+      ],
+      "version": "1.0.0",
+      "manifest": "plugins/linear-cards.json"
+    }
+  ]
+}

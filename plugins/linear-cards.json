@@ -1,0 +1,30 @@
+{
+  "id": "linear-cards",
+  "pluginName": "Linear cards",
+  "description": "Draws Linear cycles and issue lists as cards instead of prose.",
+  "version": "1.0.0",
+  "cards": [
+    {
+      "toolName": "list_cycles",
+      "marker": "LINEAR_CYCLE",
+      "payload": "{\"team\":\"<team name>\"}",
+      "hint": ""
+    },
+    {
+      "toolName": "list_issues",
+      "marker": "LINEAR_ISSUES",
+      "payload": "{\"title\":\"<short heading>\"}",
+      "hint": ""
+    }
+  ],
+  "cases": [
+    {
+      "when": "a sprint or cycle, its dates, scope or progress",
+      "then": "call list_cycles (list_teams first if you need the team id), then emit [LINEAR_CYCLE]"
+    },
+    {
+      "when": "which tickets or issues are open, assigned or in a cycle",
+      "then": "call list_issues, then emit [LINEAR_ISSUES]"
+    }
+  ]
+}
