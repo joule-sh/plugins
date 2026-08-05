@@ -31,6 +31,14 @@ function esc(raw) {
 // A tool result parsed even when the engine appended briefing prose after the
 // JSON — which it does: card hints ride the result's tail. The JSON is the
 // prefix, so walk back from the end.
+//
+// It also has to survive a TRUNCATED result, which is a real case rather than
+// a defensive one: the engine stores a preview of each tool result, and a
+// listing longer than the cap arrives cut mid-object. Walking back from the
+// end finds the longest parsable prefix — which for `{"issues":[…` cut in
+// half is nothing at all, and the renderer then draws nothing rather than
+// drawing a card with half a list in it. Half a list is worse than no card:
+// a reader cannot tell it is half.
 function parseLoose(text) {
   var t = String(text).trim();
   try { return JSON.parse(t); } catch (e) { /* appended prose */ }
